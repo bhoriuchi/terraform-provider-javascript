@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/robertkrimen/otto"
+	"log"
 	"time"
 )
 
@@ -21,32 +22,9 @@ func resourceJavascriptScript() *schema.Resource {
 				Description: "JavaScript source to run",
 			},
 			"context": &schema.Schema{
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "JSON formatted string that is used as the context",
-				Default:     "{}",
-			},
-			"values": &schema.Schema{
-				Type:        schema.TypeList,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "Variable names to set as values",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": &schema.Schema{
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Variable name to return",
-						},
-						"type": &schema.Schema{
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validateJsType,
-							Description:  "Type to coerce variable to",
-						},
-					},
-				},
+				Type:     schema.TypeMap,
+				Optional: true,
+				ForceNew: true,
 			},
 		},
 	}
@@ -65,62 +43,39 @@ func resourceJavascriptScriptDelete(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceJavascriptScriptRead(d *schema.ResourceData, meta interface{}) error {
-	vm := meta.(*otto.Otto)
-	script := d.Get("script")
-	// context := d.Get("context")
+	vm := otto.New()
+	script := d.Get("script").(string)
 	d.SetId(time.Now().UTC().String())
 
-	if result, err := vm.Run(script); err == nil {
-		fmt.Printf("[javascript-provider] Result: %v+", result)
+	if context, ok := d.GetOk("context"); ok {
+		vm.Set("context", context)
 
-		// set values if they exist
-		if values, ok := d.GetOk("values"); ok {
-			for _, v := range values.([]interface{}) {
-				vmap := v.(map[string]interface{})
+		if result, err := vm.Run(script + "\nresult = context;"); err == nil {
+			log.Printf("[javascript-provider] Result: %v+", result)
 
-				name := vmap["name"].(string)
-				if value, err := vm.Get(name); err == nil {
-					switch t := vmap["type"].(string); t {
-					case JS_BOOL:
-						if val, err := value.ToBoolean(); err == nil {
-							if err := d.Set(name, val); err != nil {
-								return fmt.Errorf("Failed to set field %q to %q; %v+", name, val, err)
-							}
-						} else {
-							fmt.Printf("[javascript-provider] Failed to convert value %q to %q", value, t)
-						}
-					case JS_FLOAT:
-						if val, err := value.ToFloat(); err == nil {
-							if err := d.Set(name, val); err != nil {
-								return fmt.Errorf("Failed to set field %q to %q; %v+", name, val, err)
-							}
-						} else {
-							fmt.Printf("[javascript-provider] Failed to convert value %q to %q", value, t)
-						}
-					case JS_INT:
-						if val, err := value.ToInteger(); err == nil {
-							if err := d.Set(name, val); err != nil {
-								return fmt.Errorf("Failed to set field %q to %q; %v+", name, val, err)
-							}
-						} else {
-							fmt.Printf("[javascript-provider] Failed to convert value %q to %q", value, t)
-						}
-					case JS_STRING:
-						if val, err := value.ToString(); err == nil {
-							if err := d.Set(name, val); err != nil {
-								return fmt.Errorf("Failed to set field %q to %q; %v+", name, val, err)
-							}
-						} else {
-							fmt.Printf("[javascript-provider] Failed to convert value %q to %q", value, t)
-						}
-					}
-				} else {
-					fmt.Printf("[javascript-provider] Failed to get value %q from vm", name)
+			if res, err := result.Export(); err == nil {
+				ctx := res.(map[string]interface{})
+
+				// there seems to be an issue with terraform TypeMaps that only allow
+				// the map to contain a single type. So in order to homogenize the the
+				// map, convert everything to a string
+				for k, v := range ctx {
+					ctx[k] = fmt.Sprintf("%v", v)
 				}
+
+				if err := d.Set("context", ctx); err != nil {
+					log.Printf("[infoblox-provider] Failed to set context: %v+", err)
+				}
+			} else {
+				log.Printf("[javascript-provider] Failed to export context: %v+", err)
 			}
+		} else {
+			return fmt.Errorf("Script run error: %v+", err)
 		}
 	} else {
-		return fmt.Errorf("Script run error: %v+", err)
+		if _, err := vm.Run(script); err != nil {
+			return fmt.Errorf("Script run error: %v+", err)
+		}
 	}
 
 	return nil
