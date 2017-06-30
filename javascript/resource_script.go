@@ -4,8 +4,16 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/robertkrimen/otto"
+	_ "github.com/robertkrimen/otto/underscore"
 	"log"
 	"time"
+)
+
+const (
+	CREATE = "create"
+	READ   = "read"
+	UPDATE = "update"
+	DELETE = "delete"
 )
 
 func resourceJavascriptScript() *schema.Resource {
@@ -31,19 +39,24 @@ func resourceJavascriptScript() *schema.Resource {
 }
 
 func resourceJavascriptScriptCreate(d *schema.ResourceData, meta interface{}) error {
-	return resourceJavascriptScriptRead(d, meta)
-}
-
-func resourceJavascriptScriptUpdate(d *schema.ResourceData, meta interface{}) error {
-	return resourceJavascriptScriptRead(d, meta)
-}
-
-func resourceJavascriptScriptDelete(d *schema.ResourceData, meta interface{}) error {
-	return resourceJavascriptScriptRead(d, meta)
+	return runScript(d, CREATE)
 }
 
 func resourceJavascriptScriptRead(d *schema.ResourceData, meta interface{}) error {
+	return runScript(d, READ)
+}
+
+func resourceJavascriptScriptUpdate(d *schema.ResourceData, meta interface{}) error {
+	return runScript(d, UPDATE)
+}
+
+func resourceJavascriptScriptDelete(d *schema.ResourceData, meta interface{}) error {
+	return runScript(d, DELETE)
+}
+
+func runScript(d *schema.ResourceData, operation string) error {
 	vm := otto.New()
+	vm.Set("operation", operation)
 	script := d.Get("script").(string)
 	d.SetId(time.Now().UTC().String())
 

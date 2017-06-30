@@ -1,11 +1,17 @@
-provider "javascript" {
-
+variable "data" {
+  type = "string"
+  default = "{\"foo\": \"bar\"}"
 }
 
+provider "javascript" {}
+
 resource "javascript_script" "s" {
-  script = "context.test1 = 'ok'; context.test2 = 1; context.test3 = true"
+  script = "context.foo = JSON.parse(context.json_string).foo"
   context = {
-    test1 = "himom"
-    test2 = 0
+    json_string = "${var.data}"
   }
+}
+
+output val {
+  value = "${javascript_script.s.context.foo}"
 }
