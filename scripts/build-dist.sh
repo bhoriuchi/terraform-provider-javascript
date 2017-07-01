@@ -4,9 +4,7 @@ export TF_PROVIDER_PKG=javascript
 export TF_PROVIDER_NAME="terraform-provider-$TF_PROVIDER_PKG"
 export GOCACHE="$PWD/dist/gosrc_cache"
 
-mkdir -p dist
-mkdir -p "$GOCACHE/src"
-mkdir -p "$GOCACHE/bin"
+mkdir -p $GOCACHE/{src,bin}
 
 if [ ! -d "$GOPATH" ]; then
     export GOPATH="$GOCACHE"
@@ -50,10 +48,10 @@ docker run --rm \
 cd "$PWD/dist"
 
 for filename in $PWD/provider_*; do
-    chmod +x $filename
-	mv $filename $TF_PROVIDER_NAME
-	tar -czvf "${filename##*/provider_}.tgz" $TF_PROVIDER_NAME
-	rm -f $TF_PROVIDER_NAME
+  chmod +x $filename
+  mv $filename $TF_PROVIDER_NAME
+  tar -czvf "${filename##*/provider_}.tgz" $TF_PROVIDER_NAME
+  rm -f $TF_PROVIDER_NAME
 done
 
 echo
