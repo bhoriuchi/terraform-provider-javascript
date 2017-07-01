@@ -51,9 +51,9 @@ cd "$PWD/dist"
 
 for filename in $PWD/provider_*; do
     chmod +x $filename
-	mv $filename terraform-provider-javascript
-	tar -czvf "${filename##*/provider_}.tgz" terraform-provider-javascript
-	rm -f terraform-provider-javascript
+	mv $filename $TF_PROVIDER_NAME
+	tar -czvf "${filename##*/provider_}.tgz" $TF_PROVIDER_NAME
+	rm -f $TF_PROVIDER_NAME
 done
 
 echo
