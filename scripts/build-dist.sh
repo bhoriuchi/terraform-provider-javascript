@@ -1,0 +1,59 @@
+#!/bin/sh
+
+export TF_PROVIDER_PKG=javascript
+export TF_PROVIDER_NAME="terraform-provider-$TF_PROVIDER_PKG"
+export GOCACHE="$PWD/dist/gosrc_cache"
+
+mkdir -p dist
+mkdir -p "$GOCACHE/src"
+mkdir -p "$GOCACHE/bin"
+
+if [ ! -d "$GOPATH" ]; then
+    export GOPATH="$GOCACHE"
+fi
+
+# fetch godeps
+echo "Fetching Dependencies... (this may take a while the first run)"
+echo
+
+docker run --rm \
+  -w//build \
+  -v/$PWD://build \
+  -v/$GOCACHE/src://go/src \
+  -v/$GOCACHE/bin://go/bin \
+  golang:1.8 \
+  go get -v github.com/mitchellh/gox
+
+docker run --rm \
+  -w//build \
+  -v/$PWD://build \
+  -v/$GOPATH/src://go/src \
+  -v/$GOCACHE/bin://go/bin \
+  golang:1.8 \
+  go get -v -d ./...
+
+# build our provider inside a go container
+echo
+echo "Building Provider --> build/dist/$TF_PROVIDER_NAME"
+echo
+
+docker run --rm \
+  -w//build \
+  -v/$PWD://build \
+  -v/$PWD/$TF_PROVIDER_PKG://build/$TF_PROVIDER_PKG \
+  -v/$PWD/dist://build/dist \
+  -v/$GOPATH/src://go/src \
+  -v/$GOCACHE/bin://go/bin \
+  golang:1.8 \
+  gox -osarch="darwin/amd64 linux/amd64" -output "dist/provider_{{.OS}}_{{.Arch}}"
+
+cd "$PWD/dist"
+
+for filename in $PWD/provider_*; do
+    chmod +x $filename
+	mv $filename terraform-provider-javascript
+	tar -czvf "${filename##*/provider_}.tgz" terraform-provider-javascript
+	rm -f terraform-provider-javascript
+done
+
+echo

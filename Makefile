@@ -6,6 +6,9 @@ default: test
 bin: fmtcheck generate
 	@sh -c "'$(CURDIR)/scripts/build.sh'"
 
+dist: fmtcheck generate
+	@sh -c "'$(CURDIR)/scripts/build-dist.sh'"
+
 ci: fmtcheck generate
 		@sh -c "'$(CURDIR)/scripts/build-ci.sh'"
 
