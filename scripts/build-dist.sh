@@ -4,6 +4,10 @@ export TF_PROVIDER_PKG=javascript
 export TF_PROVIDER_NAME="terraform-provider-$TF_PROVIDER_PKG"
 export GOCACHE="$PWD/dist/gosrc_cache"
 
+if [ -z "$GOX_OS_ARCH" ]; then
+    export GOX_OS_ARCH="darwin/amd64 linux/amd64 windows/amd64"
+fi
+
 mkdir -p $GOCACHE/{src,bin}
 
 if [ ! -d "$GOPATH" ]; then
@@ -43,7 +47,7 @@ docker run --rm \
   -v/$GOPATH/src://go/src \
   -v/$GOCACHE/bin://go/bin \
   golang:1.8 \
-  gox -osarch="darwin/amd64 linux/amd64" -output "dist/provider_{{.OS}}_{{.Arch}}"
+  gox -osarch="$GOX_OS_ARCH" -output "dist/provider_{{.OS}}_{{.Arch}}"
 
 cd "$PWD/dist"
 

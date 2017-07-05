@@ -56,6 +56,26 @@ terraform handles `TypeMap` values
 * `script` - (Required) The javascript to run
 * `context` - (Optional) Optional `TypeMap` to make available in the script
 
+### Building
+
+If the builds in the current release do not include the OS you require, you can download the
+source and create a custom distribution.
+
+**Requirements**
+
+* go tools installed
+* docker installed
+* source cloned to `$GOPATH/src/github.com/bhoriuchi/terraform-provider-javascript`
+
+**Steps**
+
+The following will set the build environment and use a docker instance to build the requested
+distribution packages.
+
+1. cd to `$GOPATH/src/github.com/bhoriuchi/terraform-provider-javascript`
+2. Set the environment variable `GOX_OS_ARCH` to the desired os/architecture combination. See [gox usage](https://github.com/mitchellh/gox#usage)
+3. run `make dist`
+
 ### Credits
 
 * Build scripts and project outline copied from [https://github.com/prudhvitella/terraform-provider-infoblox](https://github.com/prudhvitella/terraform-provider-infoblox)
